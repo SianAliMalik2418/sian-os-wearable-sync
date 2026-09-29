@@ -10,4 +10,5 @@
 app/build/
 app/release/
 app/google-services.json
+*firebase-adminsdk*.json
 dist/*.apk
