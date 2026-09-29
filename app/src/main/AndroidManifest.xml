@@ -29,6 +29,14 @@
             </intent-filter>
         </activity>
 
+        <service
+            android:name=".SyncFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- Required by Health Connect: a rationale screen shown when the user asks
              "why does this app want health data" from Health Connect's own settings. -->
         <activity-alias

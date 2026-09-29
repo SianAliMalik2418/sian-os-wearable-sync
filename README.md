@@ -46,6 +46,36 @@ Confirmed working against a Xiaomi Smart Band 10 on Android 15.
   encrypted storage — this is a single-owner app handling your own data, so that trade-off was
   made to avoid extra dependency complexity.
 
+## Firebase setup for remote sync (owner, one-time)
+
+The app registers a Firebase Cloud Messaging token with the backend on startup and on token
+refresh, and listens for a silent "sync now" push. This lets a future dashboard button trigger an
+immediate sync instead of waiting for the hourly background job. None of this works until the
+owner completes a one-time Firebase setup:
+
+1. Create a free Firebase project at [console.firebase.google.com](https://console.firebase.google.com).
+2. Add an Android app to it with package name `com.sianalimalik.wearablesync`. This must match
+   exactly.
+3. Download the generated `google-services.json` and place it at `app/google-services.json`.
+   This file is gitignored. It must never be committed.
+4. In Firebase project settings, under Service accounts, generate a new private key. This
+   downloads a JSON file with `project_id`, `client_email`, and `private_key`.
+5. Set three Worker secrets from that file's values. Run these from the `sian-os` repo, not this
+   one:
+   ```bash
+   npx wrangler secret put FCM_PROJECT_ID
+   npx wrangler secret put FCM_CLIENT_EMAIL
+   npx wrangler secret put FCM_PRIVATE_KEY
+   ```
+   For `FCM_PRIVATE_KEY`, paste the full PEM value including the `BEGIN` and `END` lines.
+
+Until this setup is done, the app still syncs manually and on its hourly schedule as before. It
+just won't receive remote sync pushes triggered from the dashboard.
+
+Once the `com.google.gms.google-services` Gradle plugin is wired in, which this change does,
+`assembleDebug` fails to configure without `app/google-services.json` present. That's expected
+until the owner completes the steps above. It isn't a bug.
+
 ## Manifest gotcha: permission button doing nothing
 
 Health Connect checks that the app declares a resolvable "permissions rationale" activity before
@@ -87,5 +117,6 @@ then `adb pair <ip:port>` and `adb connect <ip:port>`).
 
 ## Roadmap
 
-A remote sync button on the Sian OS web dashboard (push-triggered via Firebase Cloud Messaging,
-rather than waiting for the hourly background job) is planned — see `NEXT_STEPS.md`.
+The Android side of remote-triggered sync is implemented: the app registers its Firebase Cloud
+Messaging token with the backend and runs a sync when it receives a silent push. A button on the
+Sian OS web dashboard to trigger that push is being added separately. See `NEXT_STEPS.md`.

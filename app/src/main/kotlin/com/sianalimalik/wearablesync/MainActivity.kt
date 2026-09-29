@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.lifecycleScope
+import com.google.firebase.messaging.FirebaseMessaging
 import com.sianalimalik.wearablesync.databinding.ActivityMainBinding
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -36,6 +37,22 @@ class MainActivity : AppCompatActivity() {
             binding.apiKeyInput.setText(settings.apiKeyFlow.first())
             binding.autoSyncSwitch.isChecked = settings.autoSyncFlow.first()
             updatePermissionStatus(healthConnect.isAvailable() && healthConnect.hasAllPermissions())
+        }
+
+        // Best-effort: registers the FCM token for phones that already had one issued
+        // before this feature existed (onNewToken only fires on a fresh/rotated token).
+        // Wrapped so a missing google-services.json or absent Play Services can't crash
+        // startup.
+        runCatching {
+            FirebaseMessaging.getInstance().token
+                .addOnSuccessListener { token ->
+                    lifecycleScope.launch {
+                        val baseUrl = settings.baseUrlFlow.first()
+                        val apiKey = settings.apiKeyFlow.first()
+                        SianOsApiClient().registerDeviceToken(baseUrl, apiKey, token)
+                    }
+                }
+                .addOnFailureListener { }
         }
 
         binding.saveSettingsButton.setOnClickListener {

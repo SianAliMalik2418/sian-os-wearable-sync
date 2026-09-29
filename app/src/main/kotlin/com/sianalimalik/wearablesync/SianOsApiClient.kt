@@ -34,4 +34,25 @@ class SianOsApiClient(private val client: OkHttpClient = OkHttpClient()) {
                 }
             }
         }
+
+    suspend fun registerDeviceToken(baseUrl: String, apiKey: String?, token: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val json = buildJsonObject {
+                    put("token", token)
+                }
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val requestBuilder = Request.Builder()
+                    .url(baseUrl.trimEnd('/') + "/api/device-tokens")
+                    .post(body)
+                if (!apiKey.isNullOrBlank()) {
+                    requestBuilder.addHeader("Authorization", "Bearer $apiKey")
+                }
+                client.newCall(requestBuilder.build()).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        error("Device token registration failed: HTTP ${response.code} ${response.body?.string().orEmpty()}")
+                    }
+                }
+            }
+        }
 }
